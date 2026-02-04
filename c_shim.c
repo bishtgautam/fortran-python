@@ -1,6 +1,8 @@
 #include "c_shim.h"
 
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <Python.h>
+#include <numpy/arrayobject.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -53,6 +55,7 @@ int pyshim_initialize(void) {
         if (!Py_IsInitialized()) {
             return 1;
         }
+        import_array1(-1);
         PyObject *sys_path = PySys_GetObject("path");
         if (sys_path) {
             PyObject *cwd = PyUnicode_FromString("");
@@ -153,6 +156,122 @@ int pyshim_call_sum(const double *arr, int n, double *result, char *errbuf, int 
     *result = PyFloat_AsDouble(pRet);
     Py_DECREF(pRet);
 
+    write_error(errbuf, errbuf_len, "");
+    return 0;
+}
+
+int pyshim_call_numpy_multiply(const double *arr, int n, double scalar, double *result, char *errbuf, int errbuf_len) {
+    if (!arr || !result || n < 0) {
+        write_error(errbuf, errbuf_len, "Invalid input arguments");
+        return 2;
+    }
+
+    if (!Py_IsInitialized()) {
+        write_error(errbuf, errbuf_len, "Python not initialized");
+        return 3;
+    }
+
+    PyObject *numpy = PyImport_ImportModule("numpy");
+    if (!numpy) {
+        write_python_exception(errbuf, errbuf_len);
+        return 4;
+    }
+
+    npy_intp dims[1] = {n};
+    PyObject *np_array = PyArray_SimpleNewFromData(1, dims, NPY_DOUBLE, (void*)arr);
+    if (!np_array) {
+        Py_DECREF(numpy);
+        write_python_exception(errbuf, errbuf_len);
+        return 5;
+    }
+
+    PyObject *pName = PyUnicode_FromString("py_module");
+    if (!pName) {
+        Py_DECREF(np_array);
+        Py_DECREF(numpy);
+        write_python_exception(errbuf, errbuf_len);
+        return 6;
+    }
+
+    PyObject *pModule = PyImport_Import(pName);
+    Py_DECREF(pName);
+    if (!pModule) {
+        Py_DECREF(np_array);
+        Py_DECREF(numpy);
+        write_python_exception(errbuf, errbuf_len);
+        return 7;
+    }
+
+    PyObject *pFunc = PyObject_GetAttrString(pModule, "multiply_array");
+    if (!pFunc || !PyCallable_Check(pFunc)) {
+        Py_XDECREF(pFunc);
+        Py_DECREF(pModule);
+        Py_DECREF(np_array);
+        Py_DECREF(numpy);
+        write_error(errbuf, errbuf_len, "Function multiply_array not found or not callable");
+        return 8;
+    }
+
+    PyObject *pScalar = PyFloat_FromDouble(scalar);
+    if (!pScalar) {
+        Py_DECREF(pFunc);
+        Py_DECREF(pModule);
+        Py_DECREF(np_array);
+        Py_DECREF(numpy);
+        write_python_exception(errbuf, errbuf_len);
+        return 9;
+    }
+
+    PyObject *pArgs = PyTuple_New(2);
+    if (!pArgs) {
+        Py_DECREF(pScalar);
+        Py_DECREF(pFunc);
+        Py_DECREF(pModule);
+        Py_DECREF(np_array);
+        Py_DECREF(numpy);
+        write_python_exception(errbuf, errbuf_len);
+        return 10;
+    }
+    PyTuple_SET_ITEM(pArgs, 0, np_array);
+    PyTuple_SET_ITEM(pArgs, 1, pScalar);
+
+    PyObject *pRet = PyObject_CallObject(pFunc, pArgs);
+    Py_DECREF(pArgs);
+    Py_DECREF(pFunc);
+    Py_DECREF(pModule);
+    Py_DECREF(numpy);
+
+    if (!pRet) {
+        write_python_exception(errbuf, errbuf_len);
+        return 11;
+    }
+
+    if (!PyArray_Check(pRet)) {
+        Py_DECREF(pRet);
+        write_error(errbuf, errbuf_len, "Return value is not a NumPy array");
+        return 12;
+    }
+
+    PyArrayObject *ret_array = (PyArrayObject*)pRet;
+    if (PyArray_NDIM(ret_array) != 1) {
+        Py_DECREF(pRet);
+        write_error(errbuf, errbuf_len, "Return array is not 1D");
+        return 13;
+    }
+
+    npy_intp ret_size = PyArray_DIM(ret_array, 0);
+    if (ret_size != n) {
+        Py_DECREF(pRet);
+        write_error(errbuf, errbuf_len, "Return array size mismatch");
+        return 14;
+    }
+
+    double *ret_data = (double*)PyArray_DATA(ret_array);
+    for (int i = 0; i < n; ++i) {
+        result[i] = ret_data[i];
+    }
+
+    Py_DECREF(pRet);
     write_error(errbuf, errbuf_len, "");
     return 0;
 }

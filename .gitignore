@@ -6,6 +6,7 @@
 
 # Executables
 fortran_calls_python
+fortran_calls_numpy_python
 
 # Python
 __pycache__/

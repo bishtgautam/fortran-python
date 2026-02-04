@@ -19,11 +19,22 @@ program fortran_calls_python
       character(kind=c_char), intent(out) :: errbuf(*)
       integer(c_int), value :: errbuf_len
     end function pyshim_call_sum
+
+    integer(c_int) function pyshim_call_numpy_multiply(arr, n, scalar, result, errbuf, errbuf_len) bind(C, name="pyshim_call_numpy_multiply")
+      use, intrinsic :: iso_c_binding, only: c_int, c_double, c_char
+      real(c_double), intent(in) :: arr(*)
+      integer(c_int), value :: n
+      real(c_double), value :: scalar
+      real(c_double), intent(out) :: result(*)
+      character(kind=c_char), intent(out) :: errbuf(*)
+      integer(c_int), value :: errbuf_len
+    end function pyshim_call_numpy_multiply
   end interface
 
   integer(c_int) :: status
   real(c_double), dimension(5) :: arr
   real(c_double) :: result
+  real(c_double), dimension(5) :: result_arr
   character(kind=c_char), dimension(256) :: errbuf
   integer :: i
 
@@ -44,7 +55,20 @@ program fortran_calls_python
   end if
 
   print *, "Sum from Python:", result
+! Test NumPy array multiplication
+  print *, ""
+  print *, "Testing NumPy array multiplication (arr * 2.5)..."
+  status = pyshim_call_numpy_multiply(arr, size(arr), 2.5_c_double, result_arr, errbuf, size(errbuf))
+  if (status /= 0_c_int) then
+     print *, "NumPy call failed, status=", status
+     print *, "Error:", trim(to_fortran_string(errbuf))
+     status = pyshim_finalize()
+     stop 3
+  end if
 
+  print *, "Result from NumPy:", result_arr
+
+  
   status = pyshim_finalize()
   if (status /= 0_c_int) then
      print *, "Failed to finalize Python"

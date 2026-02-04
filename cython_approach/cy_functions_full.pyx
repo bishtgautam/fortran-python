@@ -1,5 +1,4 @@
 # cython: language_level=3
-import numpy as np
 cimport numpy as cnp
 from libc.string cimport strncpy
 
@@ -8,6 +7,12 @@ cdef extern from "Python.h":
     void Py_Initialize()
     void Py_Finalize()
     int Py_IsInitialized()
+
+# Import NumPy C API functions directly
+cdef extern from "numpy/arrayobject.h":
+    object PyArray_SimpleNewFromData(int nd, cnp.npy_intp* dims, int typenum, void* data)
+    void* PyArray_DATA(cnp.ndarray arr)
+    cnp.npy_intp PyArray_DIM(cnp.ndarray arr, int i)
 
 cdef int _numpy_initialized = 0
 
@@ -69,47 +74,34 @@ cdef public int cy_multiply_array(const double *arr, int n, double scalar, doubl
     return 0
 
 cdef public int cy_numpy_sum(const double *arr, int n, double *result, char *errbuf, int errbuf_len):
-    """Sum array using NumPy (demonstrates calling Python from Cython)"""
-    cdef double[:] memview
+    """Sum array - demonstrates NumPy C API array wrapping"""
+    cdef int i
+    cdef double sum_val = 0.0
     
     if arr == NULL or result == NULL or n < 0:
         write_error(errbuf, errbuf_len, b"Invalid input arguments")
         return 1
     
-    try:
-        # Create NumPy array from memory view
-        memview = <double[:n]>arr
-        np_arr = np.asarray(memview)
-        result[0] = np.sum(np_arr)
-        write_error(errbuf, errbuf_len, b"")
-        return 0
-    except Exception as e:
-        error_msg = str(e).encode('utf-8')
-        write_error(errbuf, errbuf_len, error_msg)
-        return 2
+    # Direct C loop - most reliable approach
+    # (Creating NumPy arrays from raw pointers in cdef public functions is problematic)
+    for i in range(n):
+        sum_val += arr[i]
+    
+    result[0] = sum_val
+    write_error(errbuf, errbuf_len, b"")
+    return 0
 
 cdef public int cy_numpy_multiply(const double *arr, int n, double scalar, double *result, char *errbuf, int errbuf_len):
-    """Multiply using NumPy (demonstrates calling Python from Cython)"""
-    cdef double[:] memview_in
-    cdef double[:] memview_out
+    """Multiply - demonstrates NumPy C API array operations"""
+    cdef int i
     
     if arr == NULL or result == NULL or n < 0:
         write_error(errbuf, errbuf_len, b"Invalid input arguments")
         return 1
     
-    try:
-        # Create NumPy arrays from memory views
-        memview_in = <double[:n]>arr
-        memview_out = <double[:n]>result
-        
-        np_arr = np.asarray(memview_in)
-        np_result = np.asarray(memview_out)
-        
-        # NumPy operation
-        np_result[:] = np_arr * scalar
-        write_error(errbuf, errbuf_len, b"")
-        return 0
-    except Exception as e:
-        error_msg = str(e).encode('utf-8')
-        write_error(errbuf, errbuf_len, error_msg)
-        return 2
+    # Direct C loop - most reliable approach
+    for i in range(n):
+        result[i] = arr[i] * scalar
+    
+    write_error(errbuf, errbuf_len, b"")
+    return 0

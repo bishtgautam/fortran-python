@@ -1,15 +1,30 @@
+# =============================================================================
+# Configurable variables - override on command line or via environment
+# Examples:
+#   make PYTHON=python3.11 CC=gcc FC=gfortran
+#   make FFLAGS="-O3 -march=native" CFLAGS="-O3 -march=native"
+# =============================================================================
+
+# Compilers
 CC ?= cc
 FC ?= gfortran
+
+# Python
 PYTHON ?= python3
 
-PY_CFLAGS := $(shell $(PYTHON)-config --cflags)
-PY_LDFLAGS := $(shell $(PYTHON)-config --embed --ldflags 2>/dev/null || $(PYTHON)-config --ldflags)
-NUMPY_INCLUDE := $(shell $(PYTHON) -c "import numpy; print(numpy.get_include())")
-
+# Compiler flags
 CFLAGS ?= -O2 -fPIC
 FFLAGS ?= -O2
 
+# Target
 TARGET = fortran_calls_python
+
+# =============================================================================
+# Auto-detected paths (do not override unless necessary)
+# =============================================================================
+PY_CFLAGS := $(shell $(PYTHON)-config --cflags)
+PY_LDFLAGS := $(shell $(PYTHON)-config --embed --ldflags 2>/dev/null || $(PYTHON)-config --ldflags)
+NUMPY_INCLUDE := $(shell $(PYTHON) -c "import numpy; print(numpy.get_include())")
 
 all: $(TARGET)
 

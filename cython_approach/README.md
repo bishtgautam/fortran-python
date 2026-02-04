@@ -1,35 +1,44 @@
 # Cython Approach
 
-Fortran calls compiled Cython extension modules directly.
+Fortran calls compiled Cython code with C-level performance.
 
 ## Architecture
 ```
-Fortran (ISO_C_BINDING) → Cython-generated C code (compiled) → NumPy C API
+Fortran (ISO_C_BINDING) → Cython-compiled C code → C loops / NumPy C API
 ```
-
-## Features
-- ✅ Compiled to native code for better performance
-- ✅ Automatic type conversion via Cython
-- ✅ Less boilerplate than raw C API
-- ✅ Direct memory access with NumPy arrays (no copies)
-- ⚠️ Requires Cython build step
-- ⚠️ Still needs Python runtime for NumPy
 
 ## Status
-🚧 **Work in Progress** - The code compiles but has initialization issues. The Python interpreter initialization from within a Cython module called from Fortran needs additional work. Consider the C API shim approach for production use.
+✅ **Working** - Cython with pure C operations works perfectly. Using Python objects (like `np.sum()`) from exported C functions requires additional setup.
 
-## Build
+## Build & Run
 ```bash
 make FC=gfortran
+./fortran_calls_cython
 ```
 
+## What Works
+- ✅ Pure C operations in Cython (loops, arithmetic)
+- ✅ Memory views and direct array access
+- ✅ Error handling with C strings
+- ✅ Python initialization/finalization
+- ⚠️ Calling Python functions (like `np.sum()`) requires module to be imported as Python extension
+
 ## Files
-- `cy_functions.pyx`: Cython module exposing C functions
-- `main.f90`: Fortran program with ISO_C_BINDING interfaces  
-- `Makefile`: Build script (no setup.py needed, direct cython compilation)
+- `cy_functions.pyx`: Cython module with pure C operations
+- `main.f90`: Fortran program
+- `Makefile`: Build script (direct Cython compilation, no setup.py)
 
 ## Comparison to C API Shim
-- **Simpler code**: ~60 lines vs 280 lines for equivalent functionality
-- **Type safety**: Cython handles conversions automatically
-- **No manual reference counting**: Cython manages Python objects
-- **Cleaner syntax**: Python-like code instead of raw C API calls
+**Advantages:**
+- **Simpler code**: ~60 lines vs 280 lines
+- **No manual reference counting**: Cython manages it
+- **Type safety**: Automatic type conversion  
+- **Better syntax**: Python-like instead of C API calls
+- **Same performance**: Compiles to equivalent C code
+
+**Limitations:**
+- For calling Python libraries at runtime, C API shim is more flexible
+- Cython best suited for writing new performance-critical code, not wrapping existing Python
+
+## Use Case
+Perfect for writing new numerical algorithms with clean syntax that compiles to C-speed code, callable from Fortran.

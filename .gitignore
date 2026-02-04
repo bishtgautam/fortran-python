@@ -11,8 +11,10 @@ cython_approach/fortran_calls_cython
 
 # Cython generated files
 cython_approach/cy_functions.c
+cython_approach/cy_functions_full.c
 cython_approach/*.so
 cython_approach/build/
+cython_approach/test_cython_numpy
 
 # Python
 __pycache__/

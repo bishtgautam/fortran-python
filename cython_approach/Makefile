@@ -5,15 +5,18 @@ CYTHON ?= /opt/homebrew/opt/cython/bin/cython
 FFLAGS ?= -O2
 CFLAGS ?= -O2 -fPIC
 TARGET = fortran_calls_cython
+TARGET_NUMPY = test_cython_numpy
 
 # Get Python and NumPy paths
 PY_CFLAGS := $(shell $(PYTHON)-config --cflags)
 PY_LDFLAGS := $(shell $(PYTHON)-config --embed --ldflags 2>/dev/null || $(PYTHON)-config --ldflags)
 NUMPY_INCLUDE := $(shell $(PYTHON) -c "import numpy; print(numpy.get_include())")
 
-.PHONY: all clean
+.PHONY: all clean test-numpy
 
 all: $(TARGET)
+
+test-numpy: $(TARGET_NUMPY)
 
 cy_functions.c: cy_functions.pyx
 	$(CYTHON) -3 cy_functions.pyx -o cy_functions.c
@@ -30,5 +33,21 @@ main.o: main.f90
 $(TARGET): cy_functions.so main.o
 	$(FC) main.o cy_functions.so $(PY_LDFLAGS) -o $(TARGET)
 
+# NumPy version
+cy_functions_full.c: cy_functions_full.pyx
+	$(CYTHON) -3 cy_functions_full.pyx -o cy_functions_full.c
+
+cy_functions_full.o: cy_functions_full.c
+	$(CC) $(CFLAGS) $(PY_CFLAGS) -I$(NUMPY_INCLUDE) -c cy_functions_full.c -o cy_functions_full.o
+
+cy_functions_full.so: cy_functions_full.o
+	$(CC) -shared cy_functions_full.o $(PY_LDFLAGS) -o cy_functions_full.so
+
+test_numpy.o: test_numpy.f90
+	$(FC) $(FFLAGS) -c test_numpy.f90 -o test_numpy.o
+
+$(TARGET_NUMPY): cy_functions_full.so test_numpy.o
+	$(FC) test_numpy.o cy_functions_full.so $(PY_LDFLAGS) -o $(TARGET_NUMPY)
+
 clean:
-	rm -f *.o *.so $(TARGET) cy_functions.c
+	rm -f *.o *.so $(TARGET) $(TARGET_NUMPY) cy_functions.c cy_functions_full.c

@@ -9,6 +9,11 @@ c_api_shim/fortran_calls_python
 c_api_shim/fortran_calls_numpy_python
 cython_approach/fortran_calls_cython
 
+# Cython generated files
+cython_approach/cy_functions.c
+cython_approach/*.so
+cython_approach/build/
+
 # Python
 __pycache__/
 *.py[cod]

@@ -1,0 +1,23 @@
+# Compiled object files
+*.o
+*.obj
+*.mod
+*.smod
+
+# Executables
+fortran_calls_python
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# macOS
+.DS_Store
+
+# Editor
+*workspace
+*.swp
+*.swo
+*~

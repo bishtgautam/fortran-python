@@ -31,50 +31,87 @@ program fortran_calls_cython
     end function cy_multiply_array
   end interface
 
-  integer(c_int) :: status
-  real(c_double), dimension(5) :: arr, result_arr
-  real(c_double) :: result
-  character(kind=c_char), dimension(256) :: errbuf
-  integer :: i
-
-  arr = (/ 1.0_c_double, 2.0_c_double, 3.0_c_double, 4.0_c_double, 5.0_c_double /)
-
-  ! Initialize Python
-  status = cy_initialize()
-  if (status /= 0_c_int) then
-     print *, "Failed to initialize Python"
-     stop 1
-  end if
-
-  ! Test sum
-  status = cy_sum_array(arr, size(arr), result, errbuf, size(errbuf))
-  if (status /= 0_c_int) then
-     print *, "Cython sum failed, status=", status
-     print *, "Error:", trim(to_fortran_string(errbuf))
-     status = cy_finalize()
-     stop 2
-  end if
-  print *, "Sum from Cython:", result
-
-  ! Test NumPy array multiplication
-  print *, ""
-  print *, "Testing Cython array multiplication (arr * 2.5)..."
-  status = cy_multiply_array(arr, size(arr), 2.5_c_double, result_arr, errbuf, size(errbuf))
-  if (status /= 0_c_int) then
-     print *, "Cython multiply failed, status=", status
-     print *, "Error:", trim(to_fortran_string(errbuf))
-     status = cy_finalize()
-     stop 3
-  end if
-  print *, "Result from Cython:", result_arr
-
-  ! Finalize Python
-  status = cy_finalize()
-  if (status /= 0_c_int) then
-     print *, "Failed to finalize Python"
-  end if
+  ! Main program - orchestrates initialization, run, and cleanup
+  call model_initialize()
+  call model_run()
+  call model_cleanup()
 
 contains
+
+  subroutine model_initialize()
+    ! Initialize Python and model state
+    integer(c_int) :: status
+    
+    print *, "=== Model Initialization ==="
+    status = cy_initialize()
+    if (status /= 0_c_int) then
+       print *, "ERROR: Failed to initialize Python"
+       stop 1
+    end if
+    print *, "Python initialized successfully"
+    print *, ""
+  end subroutine model_initialize
+
+  subroutine model_run()
+    ! Run model timestepping loop
+    integer :: step
+    integer(c_int) :: status
+    real(c_double), dimension(5) :: state_vector, updated_state
+    real(c_double) :: diagnostic
+    character(kind=c_char), dimension(256) :: errbuf
+    real(c_double) :: dt = 0.1_c_double
+    
+    print *, "=== Model Run (10 timesteps) ==="
+    
+    ! Initial state
+    state_vector = (/ 1.0_c_double, 2.0_c_double, 3.0_c_double, 4.0_c_double, 5.0_c_double /)
+    print *, "Initial state:", state_vector
+    print *, ""
+    
+    ! Timestepping loop
+    do step = 1, 10
+       print *, "Timestep", step, ":"
+       
+       ! Compute diagnostic (e.g., total energy/mass)
+       status = cy_sum_array(state_vector, size(state_vector), diagnostic, errbuf, size(errbuf))
+       if (status /= 0_c_int) then
+          print *, "  ERROR: Diagnostic computation failed"
+          print *, "  Error:", trim(to_fortran_string(errbuf))
+          return
+       end if
+       print *, "  Diagnostic (sum):", diagnostic
+       
+       ! Update state using Python function (e.g., apply forcing/decay)
+       status = cy_multiply_array(state_vector, size(state_vector), 1.0_c_double + dt, &
+                                   updated_state, errbuf, size(errbuf))
+       if (status /= 0_c_int) then
+          print *, "  ERROR: State update failed"
+          print *, "  Error:", trim(to_fortran_string(errbuf))
+          return
+       end if
+       
+       ! Update state vector
+       state_vector = updated_state
+       print *, "  Updated state:", state_vector(1:3), "..."
+       print *, ""
+    end do
+    
+    print *, "Final state:", state_vector
+    print *, ""
+  end subroutine model_run
+
+  subroutine model_cleanup()
+    ! Finalize Python and clean up
+    integer(c_int) :: status
+    
+    print *, "=== Model Cleanup ==="
+    status = cy_finalize()
+    if (status /= 0_c_int) then
+       print *, "WARNING: Failed to finalize Python"
+    else
+       print *, "Python finalized successfully"
+    end if
+  end subroutine model_cleanup
 
   function to_fortran_string(cstr) result(fstr)
     character(kind=c_char), intent(in) :: cstr(*)

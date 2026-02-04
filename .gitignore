@@ -5,8 +5,9 @@
 *.smod
 
 # Executables
-fortran_calls_python
-fortran_calls_numpy_python
+c_api_shim/fortran_calls_python
+c_api_shim/fortran_calls_numpy_python
+cython_approach/fortran_calls_cython
 
 # Python
 __pycache__/

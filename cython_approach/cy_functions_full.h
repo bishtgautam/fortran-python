@@ -30,10 +30,10 @@
 
 __PYX_EXTERN_C int cy_initialize(void);
 __PYX_EXTERN_C int cy_finalize(void);
-__PYX_EXTERN_C int cy_sum_array(double const *, int, double *, char *, int);
-__PYX_EXTERN_C int cy_multiply_array(double const *, int, double, double *, char *, int);
-__PYX_EXTERN_C int cy_numpy_sum(double const *, int, double *, char *, int);
-__PYX_EXTERN_C int cy_numpy_multiply(double const *, int, double, double *, char *, int);
+__PYX_EXTERN_C double cy_sum_array(double *, int);
+__PYX_EXTERN_C void cy_multiply_array(double *, int, double);
+__PYX_EXTERN_C double cy_numpy_sum(double *, int);
+__PYX_EXTERN_C void cy_numpy_multiply(double *, int, double);
 
 #endif /* !__PYX_HAVE_API__cy_functions_full */
 

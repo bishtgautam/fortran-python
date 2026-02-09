@@ -38,13 +38,17 @@ test-numpy: $(TARGET_NUMPY)
 cy_functions_full.c: cy_functions_full.pyx
 	$(CYTHON) -3 cy_functions_full.pyx -o cy_functions_full.c
 
-# Compile C to object file
+# Compile Cython-generated C to object file
 cy_functions_full.o: cy_functions_full.c
 	$(CC) $(CFLAGS) $(PY_CFLAGS) -I$(NUMPY_INCLUDE) -c cy_functions_full.c -o cy_functions_full.o
 
-# Create shared library
+# Create Cython shared library
 cy_functions_full.so: cy_functions_full.o
 	$(CC) -shared cy_functions_full.o $(PY_LDFLAGS) -o cy_functions_full.so
+
+# Compile C bridge
+cy_bridge.o: cy_bridge.c cy_functions_full.h
+	$(CC) $(CFLAGS) $(PY_CFLAGS) -I$(NUMPY_INCLUDE) -c cy_bridge.c -o cy_bridge.o
 
 # Compile Fortran programs
 main.o: main.f90
@@ -53,12 +57,15 @@ main.o: main.f90
 test_numpy.o: test_numpy.f90
 	$(FC) $(FFLAGS) -c test_numpy.f90 -o test_numpy.o
 
-# Link executables
-$(TARGET): cy_functions_full.so main.o
-	$(FC) main.o cy_functions_full.so $(PY_LDFLAGS) -o $(TARGET)
+# Link executables (with C bridge)
+$(TARGET): cy_functions_full.so cy_bridge.o main.o
+	$(FC) main.o cy_bridge.o cy_functions_full.so $(PY_LDFLAGS) -o $(TARGET)
 
-$(TARGET_NUMPY): cy_functions_full.so test_numpy.o
-	$(FC) test_numpy.o cy_functions_full.so $(PY_LDFLAGS) -o $(TARGET_NUMPY)
+$(TARGET_NUMPY): cy_functions_full.so cy_bridge.o test_numpy.o
+	$(FC) test_numpy.o cy_bridge.o cy_functions_full.so $(PY_LDFLAGS) -o $(TARGET_NUMPY)
+
+clean:
+	rm -f *.o *.so $(TARGET) $(TARGET_NUMPY) cy_functions_full.c cy_functions_full.h
 
 clean:
 	rm -f *.o *.so $(TARGET) $(TARGET_NUMPY) cy_functions_full.c

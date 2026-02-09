@@ -53,7 +53,7 @@ main.o: main.f90
 
 # Link executable (with C bridge)
 $(TARGET): cy_functions_full.so cy_bridge.o main.o
-	$(FC) main.o cy_bridge.o cy_functions_full.so $(PY_LDFLAGS) -o $(TARGET)
+	$(FC) main.o cy_bridge.o cy_functions_full.so $(PY_LDFLAGS) -Wl,-rpath,'$$ORIGIN' -o $(TARGET)
 
 clean:
 	rm -f *.o *.so $(TARGET) cy_functions_full.c cy_functions_full.h

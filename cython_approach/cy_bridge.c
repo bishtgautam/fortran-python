@@ -71,27 +71,3 @@ void cy_bridge_multiply_array(double* arr, int n, double factor)
     printf("[C BRIDGE] cy_bridge_multiply_array: Done\n");
     fflush(stdout);
 }
-
-double cy_bridge_numpy_sum(double* arr, int n)
-{
-    printf("[C BRIDGE] cy_bridge_numpy_sum: n=%d\n", n);
-    fflush(stdout);
-    
-    double result = cy_numpy_sum(arr, n);
-    
-    printf("[C BRIDGE] cy_bridge_numpy_sum: result=%f\n", result);
-    fflush(stdout);
-    
-    return result;
-}
-
-void cy_bridge_numpy_multiply(double* arr, int n, double factor)
-{
-    printf("[C BRIDGE] cy_bridge_numpy_multiply: n=%d, factor=%f\n", n, factor);
-    fflush(stdout);
-    
-    cy_numpy_multiply(arr, n, factor);
-    
-    printf("[C BRIDGE] cy_bridge_numpy_multiply: Done\n");
-    fflush(stdout);
-}

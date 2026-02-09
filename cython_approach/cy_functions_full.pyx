@@ -32,84 +32,53 @@ cdef public int cy_finalize():
     return 0
 
 cdef public double cy_sum_array(double *arr, int n):
-    """Sum array elements using pure C loop"""
-    cdef int i
-    cdef double sum_val = 0.0
-    
-    printf("[CYTHON] cy_sum_array: n=%d\n", n)
-    sys.stdout.flush()
-    
-    # Pure C computation
-    for i in range(n):
-        sum_val += arr[i]
-    
-    printf("[CYTHON] cy_sum_array: result=%f\n", sum_val)
-    sys.stdout.flush()
-    
-    return sum_val
-
-cdef public void cy_multiply_array(double *arr, int n, double scalar):
-    """Multiply array by scalar using pure C loop"""
-    cdef int i
-    
-    printf("[CYTHON] cy_multiply_array: n=%d, scalar=%f\n", n, scalar)
-    sys.stdout.flush()
-    
-    # Pure C computation
-    for i in range(n):
-        arr[i] = arr[i] * scalar
-    
-    printf("[CYTHON] cy_multiply_array: Done\n")
-    sys.stdout.flush()
-
-cdef public double cy_numpy_sum(double *arr, int n):
     """Sum array using NumPy operations"""
     cdef cnp.ndarray[cnp.float64_t, ndim=1] np_arr
     cdef double result
     
-    printf("[CYTHON] cy_numpy_sum: n=%d\n", n)
+    printf("[CYTHON] cy_sum_array: n=%d\n", n)
     sys.stdout.flush()
     
     try:
         # Create NumPy array view of the C array
         np_arr = np.asarray(<cnp.float64_t[:n]>arr)
         
-        printf("[CYTHON] cy_numpy_sum: NumPy array created\n")
+        printf("[CYTHON] cy_sum_array: NumPy array created\n")
         sys.stdout.flush()
         
         # Use NumPy sum
         result = np.sum(np_arr)
         
-        printf("[CYTHON] cy_numpy_sum: result=%f\n", result)
+        printf("[CYTHON] cy_sum_array: result=%f\n", result)
         sys.stdout.flush()
         
         return result
         
     except Exception as e:
-        printf("[CYTHON ERROR] cy_numpy_sum failed: %s\n", str(e).encode('utf-8'))
+        printf("[CYTHON ERROR] cy_sum_array failed: %s\n", str(e).encode('utf-8'))
         sys.stdout.flush()
         return 0.0
 
-cdef public void cy_numpy_multiply(double *arr, int n, double scalar):
+cdef public void cy_multiply_array(double *arr, int n, double scalar):
     """Multiply array by scalar using NumPy operations"""
     cdef cnp.ndarray[cnp.float64_t, ndim=1] np_arr
     
-    printf("[CYTHON] cy_numpy_multiply: n=%d, scalar=%f\n", n, scalar)
+    printf("[CYTHON] cy_multiply_array: n=%d, scalar=%f\n", n, scalar)
     sys.stdout.flush()
     
     try:
         # Create NumPy array view of the C array
         np_arr = np.asarray(<cnp.float64_t[:n]>arr)
         
-        printf("[CYTHON] cy_numpy_multiply: NumPy array created\n")
+        printf("[CYTHON] cy_multiply_array: NumPy array created\n")
         sys.stdout.flush()
         
         # Use NumPy multiplication
         np_arr[:] = np_arr * scalar
         
-        printf("[CYTHON] cy_numpy_multiply: Done\n")
+        printf("[CYTHON] cy_multiply_array: Done\n")
         sys.stdout.flush()
         
     except Exception as e:
-        printf("[CYTHON ERROR] cy_numpy_multiply failed: %s\n", str(e).encode('utf-8'))
+        printf("[CYTHON ERROR] cy_multiply_array failed: %s\n", str(e).encode('utf-8'))
         sys.stdout.flush()

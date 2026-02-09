@@ -19,7 +19,6 @@ CFLAGS ?= -O2 -fPIC
 
 # Targets
 TARGET = fortran_calls_cython
-TARGET_NUMPY = test_cython_numpy
 
 # =============================================================================
 # Auto-detected paths (do not override unless necessary)
@@ -28,11 +27,9 @@ PY_CFLAGS := $(shell $(PYTHON)-config --cflags)
 PY_LDFLAGS := $(shell $(PYTHON)-config --embed --ldflags 2>/dev/null || $(PYTHON)-config --ldflags)
 NUMPY_INCLUDE := $(shell $(PYTHON) -c "import numpy; print(numpy.get_include())")
 
-.PHONY: all clean test-numpy
+.PHONY: all clean
 
-all: $(TARGET) $(TARGET_NUMPY)
-
-test-numpy: $(TARGET_NUMPY)
+all: $(TARGET)
 
 # Cython to C compilation
 cy_functions_full.c: cy_functions_full.pyx
@@ -50,22 +47,13 @@ cy_functions_full.so: cy_functions_full.o
 cy_bridge.o: cy_bridge.c cy_functions_full.h
 	$(CC) $(CFLAGS) $(PY_CFLAGS) -I$(NUMPY_INCLUDE) -c cy_bridge.c -o cy_bridge.o
 
-# Compile Fortran programs
+# Compile Fortran program
 main.o: main.f90
 	$(FC) $(FFLAGS) -c main.f90 -o main.o
 
-test_numpy.o: test_numpy.f90
-	$(FC) $(FFLAGS) -c test_numpy.f90 -o test_numpy.o
-
-# Link executables (with C bridge)
+# Link executable (with C bridge)
 $(TARGET): cy_functions_full.so cy_bridge.o main.o
 	$(FC) main.o cy_bridge.o cy_functions_full.so $(PY_LDFLAGS) -o $(TARGET)
 
-$(TARGET_NUMPY): cy_functions_full.so cy_bridge.o test_numpy.o
-	$(FC) test_numpy.o cy_bridge.o cy_functions_full.so $(PY_LDFLAGS) -o $(TARGET_NUMPY)
-
 clean:
-	rm -f *.o *.so $(TARGET) $(TARGET_NUMPY) cy_functions_full.c cy_functions_full.h
-
-clean:
-	rm -f *.o *.so $(TARGET) $(TARGET_NUMPY) cy_functions_full.c
+	rm -f *.o *.so $(TARGET) cy_functions_full.c cy_functions_full.h

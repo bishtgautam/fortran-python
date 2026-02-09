@@ -1,57 +1,75 @@
-# Cython Approach
+# Cython Approach with NumPy
 
-Fortran calls compiled Cython code with C-level performance.
+Fortran calls Cython code that uses NumPy operations through a C bridge layer.
 
 ## Architecture
 ```
-Fortran (ISO_C_BINDING) → Cython-compiled C code → Direct C loops
+Fortran (ISO_C_BINDING) → C Bridge (PyImport_ImportModule) → Cython Module → NumPy Operations
 ```
 
 ## Status
-✅ **Working** - Cython functions callable from Fortran work perfectly using pure C operations.
+✅ **Working** - NumPy operations successfully callable from Fortran using PyImport_ImportModule pattern.
 
 ## Build & Run
 ```bash
-# Standard version (pure C)
-make FC=gfortran
-./fortran_calls_cython
+# Build (requires NumPy installation)
+make PYTHON=python3.14 FC=/opt/homebrew/bin/mpif90 CC=/opt/homebrew/bin/gcc-14
 
-# Test with "NumPy" functions (still using C loops underneath)
-make test-numpy FC=gfortran
-./test_cython_numpy
+# Run with NumPy
+PYTHONPATH=/opt/homebrew/lib/python3.14/site-packages ./fortran_calls_cython
 ```
 
 ## What Works
-- ✅ Pure C operations in Cython (loops, arithmetic)
-- ✅ Memory views and direct array access
-- ✅ Error handling with C strings
-- ✅ Python initialization/finalization
-- ✅ NumPy C API array wrapping (for reference, though pure C is more reliable)
+- ✅ NumPy operations (`np.sum()`, array multiplication)
+- ✅ NumPy array views from C pointers
+- ✅ Full Python context via PyImport_ImportModule
+- ✅ Error handling with try/except
+- ✅ Python initialization/finalization through C bridge
+- ✅ Memory views and direct array modification
 
 ## Key Insight
-When exporting Cython functions via `cdef public` to be called from C/Fortran:
-- **Use pure C operations** (loops, pointer arithmetic) - most reliable
-- **Avoid Python objects** (`np.sum()`, `np.asarray()`) - requires full Python context
-- **NumPy C API** works but pure C loops are simpler and just as fast
+To use NumPy operations from C/Fortran-called Cython code:
+- **Use PyImport_ImportModule pattern** - creates proper Python runtime context
+- **Avoid `cdef public` direct binding** - lacks Python context for NumPy
+- **C bridge layer essential** - handles module initialization correctly
+- **PYTHONPATH required** - embedded Python needs to find NumPy
 
 ## Files
-- `cy_functions.pyx`: Main Cython module with pure C operations
-- `cy_functions_full.pyx`: Extended version showing NumPy C API patterns
-- `main.f90`: Fortran program (basic test)
-- `test_numpy.f90`: Fortran program (extended test)
-- `Makefile`: Build script (direct Cython compilation)
+- `cy_functions_full.pyx`: Cython module with NumPy operations
+- `cy_bridge.c`: C bridge for Python module initialization
+- `main.f90`: Fortran program with timestepping example
+- `Makefile`: Build script
 
-## Comparison to C API Shim
-**Advantages:**
-- **Simpler code**: ~60 lines vs 280 lines
-- **No manual reference counting**: Cython manages it
-- **Type safety**: Automatic type conversion  
-- **Better syntax**: Python-like instead of C API calls
-- **Same performance**: Compiles to equivalent C code
+## Architecture Details
+
+### C Bridge Pattern
+The C bridge (`cy_bridge.c`) uses `PyImport_ImportModule()` to create a proper Python module context:
+```c
+PyImport_AppendInittab("cy_functions_full", PyInit_cy_functions_full);
+Py_Initialize();
+PyImport_ImportModule("cy_functions_full");
+```
+
+This differs from direct `cdef public` exports which lack the Python context needed for NumPy.
+
+### NumPy Operations
+Functions create NumPy array views from C pointers:
+```python
+np_arr = np.asarray(<cnp.float64_t[:n]>arr)
+result = np.sum(np_arr)  # Works with proper Python context!
+```
+
+## Comparison to cdef public Pattern
+**Advantages of PyImport_ImportModule:**
+- ✅ Full Python runtime context available
+- ✅ NumPy operations work correctly
+- ✅ Can use Python libraries and objects
+- ✅ Better error handling with exceptions
 
 **Trade-offs:**
-- For calling arbitrary Python libraries at runtime, C API shim is more flexible
-- Cython best suited for writing new performance code, not wrapping existing Python
+- Requires C bridge layer (adds ~80 lines)
+- Needs PYTHONPATH set at runtime
+- Slightly more complex initialization
 
 ## Use Case
-Perfect for writing new numerical algorithms with clean syntax that compiles to C-speed code, callable from Fortran.
+Ideal for calling Python/NumPy scientific computing code from legacy Fortran applications, enabling use of modern ML/data science libraries.

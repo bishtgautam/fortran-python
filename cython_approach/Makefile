@@ -30,40 +30,35 @@ NUMPY_INCLUDE := $(shell $(PYTHON) -c "import numpy; print(numpy.get_include())"
 
 .PHONY: all clean test-numpy
 
-all: $(TARGET)
+all: $(TARGET) $(TARGET_NUMPY)
 
 test-numpy: $(TARGET_NUMPY)
 
-cy_functions.c: cy_functions.pyx
-	$(CYTHON) -3 cy_functions.pyx -o cy_functions.c
-
-cy_functions.o: cy_functions.c
-	$(CC) $(CFLAGS) $(PY_CFLAGS) -I$(NUMPY_INCLUDE) -c cy_functions.c -o cy_functions.o
-
-cy_functions.so: cy_functions.o
-	$(CC) -shared cy_functions.o $(PY_LDFLAGS) -o cy_functions.so
-
-main.o: main.f90
-	$(FC) $(FFLAGS) -c main.f90 -o main.o
-
-$(TARGET): cy_functions.so main.o
-	$(FC) main.o cy_functions.so $(PY_LDFLAGS) -o $(TARGET)
-
-# NumPy version
+# Cython to C compilation
 cy_functions_full.c: cy_functions_full.pyx
 	$(CYTHON) -3 cy_functions_full.pyx -o cy_functions_full.c
 
+# Compile C to object file
 cy_functions_full.o: cy_functions_full.c
 	$(CC) $(CFLAGS) $(PY_CFLAGS) -I$(NUMPY_INCLUDE) -c cy_functions_full.c -o cy_functions_full.o
 
+# Create shared library
 cy_functions_full.so: cy_functions_full.o
 	$(CC) -shared cy_functions_full.o $(PY_LDFLAGS) -o cy_functions_full.so
 
+# Compile Fortran programs
+main.o: main.f90
+	$(FC) $(FFLAGS) -c main.f90 -o main.o
+
 test_numpy.o: test_numpy.f90
 	$(FC) $(FFLAGS) -c test_numpy.f90 -o test_numpy.o
+
+# Link executables
+$(TARGET): cy_functions_full.so main.o
+	$(FC) main.o cy_functions_full.so $(PY_LDFLAGS) -o $(TARGET)
 
 $(TARGET_NUMPY): cy_functions_full.so test_numpy.o
 	$(FC) test_numpy.o cy_functions_full.so $(PY_LDFLAGS) -o $(TARGET_NUMPY)
 
 clean:
-	rm -f *.o *.so $(TARGET) $(TARGET_NUMPY) cy_functions.c cy_functions_full.c
+	rm -f *.o *.so $(TARGET) $(TARGET_NUMPY) cy_functions_full.c

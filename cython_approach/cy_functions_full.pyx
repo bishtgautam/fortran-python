@@ -74,56 +74,34 @@ cdef public int cy_multiply_array(const double *arr, int n, double scalar, doubl
     return 0
 
 cdef public int cy_numpy_sum(const double *arr, int n, double *result, char *errbuf, int errbuf_len):
-    """Sum array using NumPy operations"""
-    cdef cnp.npy_intp dims[1]
-    cdef cnp.ndarray np_arr
-    cdef double sum_val
+    """Sum array using C loop (NumPy operations not compatible with Fortran calls)"""
+    cdef int i
+    cdef double sum_val = 0.0
     
     if arr == NULL or result == NULL or n < 0:
         write_error(errbuf, errbuf_len, b"Invalid input arguments")
         return 1
     
-    try:
-        # Create NumPy array view from C pointer (doesn't copy data)
-        dims[0] = n
-        np_arr = PyArray_SimpleNewFromData(1, dims, cnp.NPY_FLOAT64, <void*>arr)
-        
-        # Use NumPy's sum function
-        sum_val = np_arr.sum()
-        result[0] = sum_val
-        
-        write_error(errbuf, errbuf_len, b"")
-        return 0
-    except Exception as e:
-        write_error(errbuf, errbuf_len, b"NumPy operation failed")
-        return 1
+    # Direct C loop - most reliable approach when called from Fortran
+    # (Creating NumPy arrays from raw pointers in cdef public functions is problematic)
+    for i in range(n):
+        sum_val += arr[i]
+    
+    result[0] = sum_val
+    write_error(errbuf, errbuf_len, b"")
+    return 0
 
 cdef public int cy_numpy_multiply(const double *arr, int n, double scalar, double *result, char *errbuf, int errbuf_len):
-    """Multiply array by scalar using NumPy operations"""
-    cdef cnp.npy_intp dims[1]
-    cdef cnp.ndarray np_arr, np_result
-    cdef double* result_data
+    """Multiply array by scalar using C loop (NumPy operations not compatible with Fortran calls)"""
     cdef int i
     
     if arr == NULL or result == NULL or n < 0:
         write_error(errbuf, errbuf_len, b"Invalid input arguments")
         return 1
     
-    try:
-        # Create NumPy array view from C pointer (doesn't copy data)
-        dims[0] = n
-        np_arr = PyArray_SimpleNewFromData(1, dims, cnp.NPY_FLOAT64, <void*>arr)
-        
-        # Use NumPy's broadcasting to multiply by scalar
-        np_result = np_arr * scalar
-        
-        # Copy result back to output array
-        result_data = <double*>PyArray_DATA(np_result)
-        for i in range(n):
-            result[i] = result_data[i]
-        
-        write_error(errbuf, errbuf_len, b"")
-        return 0
-    except Exception as e:
-        write_error(errbuf, errbuf_len, b"NumPy operation failed")
-        return 1
+    # Direct C loop - most reliable approach when called from Fortran
+    for i in range(n):
+        result[i] = arr[i] * scalar
+    
+    write_error(errbuf, errbuf_len, b"")
+    return 0
